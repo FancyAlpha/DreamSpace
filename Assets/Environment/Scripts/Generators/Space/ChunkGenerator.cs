@@ -3,26 +3,36 @@ using System.Collections.Generic;
 
 public class ChunkGenerator : MonoBehaviour {
 
-    public const float maxViewDst = 450;
+    const float sqrMoveUpdateThreshold = 25f * 25f;
+
+    static float maxViewDst;
     public Transform viewer;
     public Material mapMaterial;
 
     public static Vector3 viewerPosition;
+    public static Vector3 viewerPositionOld;
+
     static MapGenerator mapGenerator;
     public int chunkSize;
-    int chunksVisibleInViewDst;
+    public int chunksVisibleInViewDst;
 
     Dictionary<Vector3 , Chunk> ChunkDictionary = new Dictionary<Vector3 , Chunk>();
-    List<Chunk> ChunksVisibleLastUpdate = new List<Chunk>();
+    static List<Chunk> ChunksVisibleLastUpdate = new List<Chunk>();
 
     void Start () {
         mapGenerator = FindObjectOfType<MapGenerator>();
-        chunksVisibleInViewDst = Mathf.RoundToInt(maxViewDst / chunkSize);
+        maxViewDst = chunkSize * chunksVisibleInViewDst;
+
+
+        UpdateVisibleChunks();
     }
 
     void Update () {
         viewerPosition = viewer.position;
-        UpdateVisibleChunks();
+        if ( ( viewerPositionOld - viewerPosition ).sqrMagnitude > sqrMoveUpdateThreshold ) {
+            viewerPositionOld = viewerPosition;
+            UpdateVisibleChunks();
+        }
     }
 
     void UpdateVisibleChunks () {
@@ -41,14 +51,10 @@ public class ChunkGenerator : MonoBehaviour {
                 for ( int zOffset = -chunksVisibleInViewDst; zOffset <= chunksVisibleInViewDst; zOffset++ ) {
                     Vector3 viewedChunkCoord = new Vector3(currentChunkCoordX + xOffset , currentChunkCoordY + yOffset , currentChunkCoordZ + zOffset);
 
-                    if ( ChunkDictionary.ContainsKey(viewedChunkCoord) ) {
+                    if ( ChunkDictionary.ContainsKey(viewedChunkCoord) )
                         ChunkDictionary [viewedChunkCoord].UpdateChunk();
-                        if ( ChunkDictionary [viewedChunkCoord].IsVisible() ) {
-                            ChunksVisibleLastUpdate.Add(ChunkDictionary [viewedChunkCoord]);
-                        }
-                    } else {
+                    else
                         ChunkDictionary.Add(viewedChunkCoord , new Chunk(viewedChunkCoord , chunkSize , transform, mapMaterial));
-                    }
                 }
             }
         }
@@ -76,22 +82,29 @@ public class ChunkGenerator : MonoBehaviour {
             meshRenderer.material = material;
 
             meshObject.transform.position = position;
-            meshObject.transform.localScale = Vector3.one * size/10;
+
             meshObject.transform.parent = parent;
             SetVisible(false);
 
-            Debug.Log("Requested");
+            Debug.Log("Mesh Data Requested");
             mapGenerator.RequestMeshData(onMeshDataReceived);
         }
 
         void onMeshDataReceived (MeshData meshData) {
             Debug.Log("Mesh Data received");
             meshFilter.mesh = meshData.CreateMesh(true);
+
+            //This may be innefficient
+            UpdateChunk();
         }
 
         public void UpdateChunk () {
             float viewerDstFromNearestEdge = Mathf.Sqrt(bounds.SqrDistance(viewerPosition));
             bool visible = viewerDstFromNearestEdge <= maxViewDst;
+
+            if ( visible )
+                ChunksVisibleLastUpdate.Add(this);
+
             SetVisible(visible);
         }
 

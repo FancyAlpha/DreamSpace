@@ -4,6 +4,8 @@ using System;
 using System.Threading;
 
 public class MapGenerator : MonoBehaviour {
+    public int figureSize;
+
     Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
 
     public void RequestMeshData (Action<MeshData> callback) {
@@ -15,17 +17,14 @@ public class MapGenerator : MonoBehaviour {
     }
 
     void MeshDataThread (Action<MeshData> callback) {
-        MeshData meshData = PolyhedronGenerator.Create(0 , Vector3.one , Vector3.zero);
-        lock ( meshDataThreadInfoQueue ) {
-            Debug.Log("locked");
+        MeshData meshData = PolyhedronGenerator.Create(0 , Vector3.one * figureSize, Vector3.zero);
+        lock ( meshDataThreadInfoQueue )
             meshDataThreadInfoQueue.Enqueue(new MapThreadInfo<MeshData>(callback , meshData));
-        }
     }
 
     void Update () {
         if ( meshDataThreadInfoQueue.Count > 0 ) {
             for ( int i = 0; i < meshDataThreadInfoQueue.Count; i++ ) {
-                Debug.Log("Queued");
                 MapThreadInfo<MeshData> threadInfo = meshDataThreadInfoQueue.Dequeue();
                 threadInfo.callback(threadInfo.parameter);
             }

@@ -21,10 +21,8 @@ public class FigureEditor : MonoBehaviour {
             case GenerateMode.Dynagon:
                 GetComponent<MeshFilter>().mesh = CreatePolygon(vertexes).CreateMesh(true);
             break;
-            case GenerateMode.Polyhedron: {
-                MeshData meshData = PolyhedronGenerator.Create(lod, scale, position);
-                GetComponent<MeshFilter>().mesh = meshData.CreateMesh(false);
-            }
+            case GenerateMode.Polyhedron:
+                GetComponent<MeshFilter>().mesh = PolyhedronGenerator.Create(lod , scale , position).CreateMesh(false);
             break;
         }
     }
